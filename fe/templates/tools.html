@@ -1,0 +1,23 @@
+<!-- This file contains the list of headings and tables associated with each heading -->
+<!-- The tables are populated with the data from the database. 
+ The table has 3 columns id, tool name, tool http link -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">Tools List</h1>
+    <table class="table table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>ID</th>
+                <th>Tool Name</th>
+                <th>Tool HTTP Link</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data from the database will be populated here -->
+        </tbody>
+    </table>
+</div>
+{% endblock %}

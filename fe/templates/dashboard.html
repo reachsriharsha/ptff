@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Stock Lookup</h5>
+                <input type="text" id="stockSymbol" class="form-control" placeholder="Enter stock symbol">
+                <button onclick="getStockData()" class="btn btn-primary mt-2">Analyze</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div id="stockData" class="card">
+            <div class="card-body">
+                <h5 class="card-title">Stock Analysis</h5>
+                <div id="analysisResult"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+async function getStockData() {
+    const symbol = document.getElementById('stockSymbol').value;
+    const resultDiv = document.getElementById('analysisResult');
+    
+    try {
+        // Start the analysis tasks
+        const response = await fetch(`/api/stock/${symbol}`);
+        const { task_ids } = await response.json();
+        
+        resultDiv.innerHTML = '<p>Analyzing stock data...</p>';
+        
+        // Poll for results
+        const results = await Promise.all([
+            pollTaskResult(task_ids.analysis),
+            pollTaskResult(task_ids.technical)
+        ]);
+        
+        const [analysisResult, technicalResult] = results;
+        
+        // Display results
+        resultDiv.innerHTML = `
+            <h6>Price Analysis</h6>
+            <p>Current Price: $${analysisResult.result.data.current_price.toFixed(2)}</p>
+            
+            <h6 class="mt-3">Technical Indicators</h6>
+            <p>RSI: ${technicalResult.result.data.rsi.toFixed(2)}</p>
+           
+        `;
+    } catch (error) {
+        resultDiv.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+    }
+}
+
+async function pollTaskResult(taskId, maxAttempts = 10) {
+    for (let i = 0; i < maxAttempts; i++) {
+        const response = await fetch(`/api/tasks/${taskId}`);
+        const result = await response.json();
+        
+        if (result.status === 'completed') {
+            return result;
+        } else if (result.status === 'failed') {
+            throw new Error(result.error);
+        }
+        
+        // Wait 1 second before next attempt
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error('Task timed out');
+}
+</script>
+{% endblock %}
