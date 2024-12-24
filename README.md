@@ -28,7 +28,7 @@ This project utilizes Docker Compose to orchestrate a multi-container environmen
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository_url>
+   git clone https://github.com/reachsriharsha/ptff.git
 
 2. **Build and start the containers:**
 docker-compose up -d
@@ -36,20 +36,3 @@ docker-compose up -d
 **Accessing the application:**
 
 he frontend application will be accessible at http://localhost.
-
-**Project Structure:**
-project_name/
-├── be/                       # Backend directory
-│   ├── app/                 # Application source code
-│   ├── Dockerfile           # Dockerfile for backend container
-│   ├── requirements.txt     # Backend dependencies
-│   └── ... 
-├── fe/                       # Frontend directory
-│   ├── app/                 # Frontend source code (e.g., React, Vue.js)
-│   ├── Dockerfile           # Dockerfile for frontend container
-│   ├── package.json         # (if using npm/yarn)
-│   └── ...
-├── nginx.conf               # Nginx configuration file
-├── docker-compose.yml       # This file
-├── docker-compose.dev.yml   # Optional: Development environment configuration
-└── postgres_data/            # Persistent volume for PostgreSQL data
