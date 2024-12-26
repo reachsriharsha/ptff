@@ -2,3 +2,10 @@
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
+body.dark-mode {
+    background-color: #343a40;
+    color: #fff;
+    /* Add more styles for dark mode here, 
+       e.g., for specific Bootstrap components */
+}

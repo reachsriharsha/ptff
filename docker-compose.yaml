@@ -1,3 +1,6 @@
+include:
+  - docker-compose.networks.yaml
+  - docker-compose.milvus.yaml
 
 services:
   nginx:
@@ -69,9 +72,15 @@ services:
     networks:
       - ptff_network
 
-networks:
-  ptff_network:
-    driver: bridge
-    
+  ollama:
+    image: ollama/ollama:latest  # Use the latest Ollama image
+    container_name: ollama 
+    ports:
+      - "11434:11434"  # Expose the Ollama API port
+    volumes:
+      - ./models:/root/.local/share/ollama/models  # Mount your model files 
+    environment:
+      - GPU_MODE=auto  # Enable GPU support if available
+    restart: unless-stopped 
 volumes:
   postgres_data:

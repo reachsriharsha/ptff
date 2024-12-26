@@ -41,7 +41,9 @@ models.Base.metadata.create_all(bind=engine)
 
 
 
-app = FastAPI()
+app = FastAPI(title="Sample Framework to demonstrate the FAST API",
+                          description="Sample Framework to demonstrate the FAST API",
+                          version="0.1",)
 
 #@app.get("/api/stock/{symbol}", response_model=StockData)
 @app.get("/api/stock/{symbol}")
