@@ -48,9 +48,13 @@ class KnowledgeBaseDB(Base):
     title = Column(String)
     description = Column(String)
     collection_name = Column(String)
+    tag_or_version = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="knowledge_base")
+
+    def __str__(self):
+        return f"KnowledgeBaseDB: title: {self.title}, description: {self.description}, collection_name: {self.collection_name}, created_at: {self.created_at}, user_id: {self.user_id}"
 
 
 

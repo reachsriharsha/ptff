@@ -30,21 +30,13 @@ class Watchlist(WatchlistCreate):
         from_orm = True
 
 
-class KnowledgeBaseCreate(UserBase):
+class KnowledgeBaseCreate(BaseModel):
     title: str
     tag_or_version: str
     description: str
-    file_name: str
+    email: str
+
+    def __str__(self):
+        return f"KnowledgeBaseCreate: title: {self.title}, tag_or_version: {self.tag_or_version}, description: {self.description}, file_name: {self.email}"
 
 
-class KnowledgeBaseResponse(BaseModel):
-    id: int
-    title: str
-    tag_or_version: str
-    description: str
-    user_id: int
-    created_at: datetime
-
-    class Config:
-        #orm_mode = True
-        from_attributes = True

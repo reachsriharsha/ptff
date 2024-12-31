@@ -82,34 +82,48 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
-@app.post("/api/kb/",  response_model=schemas.KnowledgeBaseResponse)
+@app.post("/api/kb/add")
 async def create_knowledge_base_entry(
     kb_create: schemas.KnowledgeBaseCreate,
     db: Session = Depends(get_db)
 ):
+    logger.debug(f"Creating knowledge base entry from input {kb_create}")
+    
     
     db_user = db.query(models.User).filter(models.User.email == kb_create.email).first()
     if db_user:
+
+        # Check if the entry already exists
+        existing_entry = db.query(models.KnowledgeBaseDB).filter(
+            models.KnowledgeBaseDB.title == kb_create.title,
+            models.KnowledgeBaseDB.user_id == db_user.id,
+            models.KnowledgeBaseDB.tag_or_version == kb_create.tag_or_version
+        ).first()
+
+        if existing_entry:
+            logger.debug(f"Knowledge base entry already exists {existing_entry}")
+            return {'status': 'success',
+                    'message': 'Knowledge base entry added successfully'
+                }
+        
         #create collection name
-        collection_name = f"{utils.clense_name(kb_create.title)}_kb_{utils.gen_random_string()}"
+        collection_name = f"{utils.clense_name(kb_create.title)}_kb"
         db_knowledge_base = models.KnowledgeBaseDB(
             title=kb_create.title,
             tag_or_version=kb_create.tag_or_version,
             description=kb_create.description,
             collection_name=collection_name,
             user_id=db_user.id)
+        logger.debug(f"Creating knowledge base entry {db_knowledge_base}")
         db.add(db_knowledge_base)
         db.commit()
         db.refresh(db_knowledge_base)
-        kb_addition.delay(
-            kb_create.title, 
-            kb_create.description, 
-            collection_name, 
-            db_user.id
-        )
 
         #FIX ME: Return proper http code etc..
-        return db_knowledge_base
+        #return db_knowledge_base
+        return {'status': 'success',
+                 'message': 'Knowledge base entry added successfully'
+                }
     else:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -132,6 +146,15 @@ async def upload_file(file: UploadFile = File(...)):
                 await out_file.write(content)
         # Get file size for confirmation
         file_size = os.path.getsize(file_location)
+
+        '''
+        kb_addition.delay(
+            kb_create.title, 
+            kb_create.description, 
+            collection_name, 
+            db_user.id
+        )'''
+
     
         return {
             "filename": file.filename,
@@ -162,9 +185,12 @@ async def login(
     
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={'sub': user.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, 
+            "token_type": "bearer", 
+            'email': user.email
+            }
 
 @app.post("/api/watchlists/", response_model=schemas.Watchlist)
 async def create_watchlist(

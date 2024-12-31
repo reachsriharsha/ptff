@@ -11,14 +11,16 @@
                     </div>
                 </div>
             </div>
+            <!-- First Card -->
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="text-center">Create Knowledge Base</h3>
+                        <h3 class="text-center">Upload Data to Knowledge Base</h3>
                     </div>
                     <div class="card-body">
                         <form id="uploadForm" enctype=multipart/form-data>
                             <div class="mb-3">
+
                                 <label for="file" class="form-label">Choose File(s)</label>
                                 <!-- <input type="file" class="form-control" id="file" name="file" required> -->
                                 <input type="file" class="form-control" id="file" name="file" multiple>
@@ -32,6 +34,36 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Second Card -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Add New Knowledge Base</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="kbCreateForm">
+                            <div class="mb-3">
+                                <label for="kbTitle" class="form-label">Knowledge Base Title</label>
+                                <input type="text" class="form-control" id="kbTitle" name="kbTitle" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <input type="text" class="form-control" id="description" name="description" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="versionNumber" class="form-label">Version Number</label>
+                                <input type="text" class="form-control" id="versionNumber" name="versionNumber" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">Submit</button>
+                        </form> 
+                        
+                    </div>
+                </div>
+            </div>
+            <!-- Second Card -->
+            
         </div>
     </div>
 
@@ -100,6 +132,35 @@
                 formData.delete('file'); // Remove the file from formData for the next iteration
             }
             //end
+        });
+    
+        
+        document.getElementById('kbCreateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const kbTitle = document.getElementById('kbTitle').value;
+            const versionNumber = document.getElementById('versionNumber').value;
+            const description = document.getElementById('description').value;
+            const formData = new FormData();
+            formData.append('title', kbTitle);
+            formData.append('tag_or_version', versionNumber);
+            formData.append('description', description);
+
+            
+            const response = await fetch('/kb/create', {
+                method: 'POST',
+                /*headers: {
+                    'Content-Type': 'application/json'
+                },*/
+                body: formData
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+                console.error('Error creating Knowledge Base' , responseData);
+                showAlert('Failed to create Knowledge Base.', 'danger');
+                return;
+            }
+            console.log('Knowledge Base created successfully:', responseData);
+            showAlert('Knowledge Base created successfully!', 'success');
         });
     </script>
 

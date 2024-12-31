@@ -7,6 +7,7 @@ from flask import (
     redirect, 
     url_for
 )
+
 #from flask_wtf.csrf import CSRFProtect
 #ToDo; Use flask log in manager.
 import requests
@@ -14,7 +15,7 @@ from functools import wraps
 import os
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
-
+import traceback
 from logs import logger  # Import the logger from the logger.py file
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'csv'}
@@ -53,7 +54,11 @@ def login():
         
         if response.status_code == 200:
             data = response.json()
+            logger.debug(f"User logged in successfully: {data}")
             session['access_token'] = data['access_token']
+            session['username'] = request.form['username']
+            session['email'] = data['email']
+            
             return redirect(url_for('dashboard'))
         
         return render_template('login.html', error="Invalid credentials")
@@ -90,6 +95,45 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+@app.route('/kb/create', methods=['POST'])
+@login_required
+def create_kb():
+    if request.method == 'POST':
+        description = request.form.get('description', 'NA')
+        email = session.get('email', 'NA')
+
+        try:
+            logger.debug(f"Knowledge base addition details: {request.form.to_dict()}")
+            response = requests.post(
+                f"{os.getenv('BACKEND_URL')}/kb/add",
+                json={
+                    "title": request.form['title'],
+                    "tag_or_version": request.form['tag_or_version'],
+                    "description": description,
+                    "email": email
+                    #"description": request.form['description'],
+                    #"file_name": request.form['file_name'],
+                    #"email": request.form['email']
+                }
+            )
+            
+            if response.status_code == 200:
+                #return redirect(url_for('kb'))
+                logger.info(f"Knowledge base entry added successfully: {response.json()}")
+                return jsonify({'message': 'Knowledge base entry added successfully'}), 200
+            else:
+                return jsonify({'error': 'Knowledge base addition failed'}), 400
+            
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(f"Knowledge base addition failed: {str(e)}")
+            return jsonify({'error': 'Knowledge base addition failed'}), 400
+    
+    return render_template('kb.html', error="Knowledge base addition failed")
+
+
+    
+
 @app.route('/kb')
 @login_required
 def kb():
@@ -110,6 +154,7 @@ def add_kb():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     
+    #FIX ME: Check how to use allowed files only.
     if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             safe_file_path = os.path.join(os.getenv('UPLOAD_FOLDER'), filename)
@@ -132,37 +177,6 @@ def add_kb():
                 else:
                     return { "status": "error", "message": "Knowledge base addition failed" }
                 
-    
-
-    
-    
-    #with open(os.path.join("tempDir", file.filename), 'wb') as f:
-    #    f.write(file.get_buffer())    
-    #    f.close()
-#
-    #with open(os.path.join("tempDir", file.filename), 'rb') as f:
-    #    files = {'file': (file.filename, f, file.content_type)}
-    #    response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', files=files)
-    #    f.close()
-    
-    #files = {'file': (file.filename, file.stream, file.content_type)}
-    #response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', files=files)
-
-    #response = requests.post(
-    #    f"{os.getenv('BACKEND_URL')}/kb/upload",
-    #    json={
-    #        "title": request.form['title'],
-    #        "description": request.form['description'],
-    #        "collection_name": request.form['collection_name'],
-    #        "tag_or_version": request.form['tag_or_version'],
-    #        "file_name": request.form['file_name'],
-    #        "user_id": 1
-    #    }
-    #)
-    
-    #if response.status_code == 200:
-    #    return redirect(url_for('kb'))
-    
     return render_template('kb.html', error="Knowledge base addition failed")
 
 #create a new route to access tools section
