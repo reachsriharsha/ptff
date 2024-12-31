@@ -1,9 +1,16 @@
 from celery import Celery
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+
+broker_url = os.environ.get('CELERY_BROKER_URL')
+result_backend = os.environ.get('CELERY_RESULT_BACKEND')
 
 celery_app = Celery(
     'tasks',
-    broker='redis://redis:6379/0',
-    backend='redis://redis:6379/0',
+    broker=broker_url,
+    backend=result_backend,
 )
 
 celery_app.conf.update (

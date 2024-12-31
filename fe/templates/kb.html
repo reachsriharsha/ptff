@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <!-- Alert container at the top -->
+            <div id="alertContainer" class="row justify-content-center mb-3" style="display: none;">
+                <div class="col-md-6">
+                    <div class="alert alert-success alert-fade alert-dismissible fade show" role="alert">
+                        <span id="alertMessage">File uploaded successfully!</span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Create Knowledge Base</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm" enctype=multipart/form-data>
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Choose File(s)</label>
+                                <!-- <input type="file" class="form-control" id="file" name="file" required> -->
+                                <input type="file" class="form-control" id="file" name="file" multiple>
+                                
+                            </div>
+                            <div class="progress mb-3 d-none">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Upload</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script> -->
+    <script src="{{ url_for('static', filename='bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js')}}"></script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('file');
+            //formData.append('file', fileInput.files[0]);
+            //start 
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('file', fileInput.files[i]);
+                /*const response = await fetch('/kb/add', {
+                    method: 'POST',
+                    body: formData
+                }); */
+                console.debug('Processing File:', fileInput.files[i]);
+                const response = await fetch('/kb/add', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // Check if the response is JSON
+                        if (response.headers.get('Content-Type') && response.headers.get('Content-Type').includes('application/json')) {
+                            return response.json().then(errorData => {
+                                // Handle the JSON error response
+                                console.error('Error during file upload:', errorData);
+                                alert('Upload failed: ' + errorData.error.message); // Display the specific error message
+                                showAlert(`Upload Failed: File ${fileInput.files[i].name} failed!` +  errorData.error.message, 'danger');
+                            });
+                        } else {
+                            // Handle non-JSON errors (e.g., HTML error pages)  
+                            console.error('Error during file upload (non-JSON response):', response.status, response.statusText);
+                            return response.text().then(responseText => {  // Read the text response
+                            console.error('Server Response:', responseText); // Log the raw response for debugging
+                            //alert('An error occurred during upload. Check the console for details.');
+                            showAlert('An error occurred during upload.', 'danger');
+                            });
+                        }
+                    }
+                    return response.json();
+                })
+                .then (data => {
+                        // Handle successful upload
+                        console.log('File uploaded successfully:', data);
+                        showAlert('File uploaded and processed successfully!', 'success');
+                        /*showAlert('Green Success Message', 'success'); // Green alert
+                        showAlert('Red Failed Message', 'danger');  // Red alert
+                        showAlert('Yellow Warning Message', 'warning'); // Yellow alert
+                        showAlert('Blue Simple Message', 'info');    // Blue alert */
+
+                })
+                .catch(error => {
+                    console.error('Network error during upload:', error);
+                    //alert('A network error occurred during upload.');
+                    showAlert('A network error occurred during upload.', 'danger');  // Red alert
+                });
+
+                /*const data = await response.json();
+                console.log('File uploaded successfully:', data);
+                showAlert(`File ${fileInput.files[i].name} uploaded and processed successfully!`, 'success'); */
+                formData.delete('file'); // Remove the file from formData for the next iteration
+            }
+            //end
+        });
+    </script>
+
+{% endblock %}

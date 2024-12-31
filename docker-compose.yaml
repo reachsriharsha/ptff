@@ -42,11 +42,14 @@ services:
     environment:
       - PORT=8000
       - REDIS_URL = redis://redis:6379/0
+    env_file:
+      - ./be/.env.prod
     depends_on:
       - redis
       - postgres
     volumes:
       - ./be:/app
+      - ./uploads/be:/app/uploads
     networks:
       - ptff_network
 
@@ -67,8 +70,11 @@ services:
       dockerfile: Dockerfile
     environment:
       - BACKEND_URL=http://nginx/api
+    env_file:
+      - ./fe/.env.prod
     volumes:
       - ./fe:/app
+      - ./uploads/fe:/app/uploads
     networks:
       - ptff_network
 
@@ -81,6 +87,7 @@ services:
       - ./models:/root/.local/share/ollama/models  # Mount your model files 
     environment:
       - GPU_MODE=auto  # Enable GPU support if available
+      - GIN_MODE=release
     restart: unless-stopped 
 volumes:
   postgres_data:

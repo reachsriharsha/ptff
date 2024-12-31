@@ -11,14 +11,25 @@ from flask import (
 #ToDo; Use flask log in manager.
 import requests
 from functools import wraps
-
 import os
+from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
+
+from logs import logger  # Import the logger from the logger.py file
+
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'csv'}
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
-#csrf = CSRFProtect(app)
+app.secret_key = os.environ.get('SECRET_KEY')
 
-BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost/api')
+#csrf = CSRFProtect(app)
+#BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost/api')
+BACKEND_URL = os.environ.get('BACKEND_URL')
 
 
 def login_required(f):
@@ -77,6 +88,82 @@ def logout():
 @login_required
 def dashboard():
     return render_template('dashboard.html')
+
+
+@app.route('/kb')
+@login_required
+def kb():
+    return render_template('kb.html')
+
+
+
+@app.route('/kb/add', methods=['POST'])
+@login_required
+def add_kb():
+    #logger.info(f"Adding knowledge base entry  {request.form}")
+    #print(f"======>Adding knowledge base entry {request.form}\n\n\n")
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            safe_file_path = os.path.join(os.getenv('UPLOAD_FOLDER'), filename)
+            file.save(safe_file_path)
+            #return jsonify({'message': 'File uploaded successfully'}), 200
+            with open(safe_file_path, 'rb') as f:
+                #files = {'file': (filename, f, file.content_type)}
+                files = {'file':f}
+                response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', files=files)
+                f.close()
+                if response.status_code == 200:
+                    logger.info(f"Knowledge base entry added successfully: {response.json()}")
+                    #return redirect(url_for('kb'))
+                    #return render_template('kb.html', message="Knowledge base addition successful")
+                    return {
+                        "status": "success",
+                        "message": f"File '{filename}' uploaded successfully"
+                    }
+                #response.json()
+                else:
+                    return { "status": "error", "message": "Knowledge base addition failed" }
+                
+    
+
+    
+    
+    #with open(os.path.join("tempDir", file.filename), 'wb') as f:
+    #    f.write(file.get_buffer())    
+    #    f.close()
+#
+    #with open(os.path.join("tempDir", file.filename), 'rb') as f:
+    #    files = {'file': (file.filename, f, file.content_type)}
+    #    response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', files=files)
+    #    f.close()
+    
+    #files = {'file': (file.filename, file.stream, file.content_type)}
+    #response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', files=files)
+
+    #response = requests.post(
+    #    f"{os.getenv('BACKEND_URL')}/kb/upload",
+    #    json={
+    #        "title": request.form['title'],
+    #        "description": request.form['description'],
+    #        "collection_name": request.form['collection_name'],
+    #        "tag_or_version": request.form['tag_or_version'],
+    #        "file_name": request.form['file_name'],
+    #        "user_id": 1
+    #    }
+    #)
+    
+    #if response.status_code == 200:
+    #    return redirect(url_for('kb'))
+    
+    return render_template('kb.html', error="Knowledge base addition failed")
 
 #create a new route to access tools section
 @app.route('/tools') 

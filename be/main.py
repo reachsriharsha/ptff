@@ -2,43 +2,36 @@ from fastapi import (
     FastAPI, 
     HTTPException,
     Depends,
-    status
+    status,
+    File, 
+    UploadFile
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
 import yfinance as yf
-from tasks import analyze_stock, calculate_technical_indicators
+from tasks import (
+    analyze_stock, 
+    calculate_technical_indicators,
+    kb_addition,
+)
 from celery.result import AsyncResult
 
-import logging
 from database import get_db, engine
-import models, schemas, auth
+import models, schemas, auth, utils
 from datetime import datetime, timedelta
+from logs import logger  # Import the logger from the logger.py file
+from dotenv import load_dotenv
+import os
+from pathlib import Path
+import aiofiles
+import traceback
 
+load_dotenv()
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# Create a console handler and set the formatter
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-# Get the root logger and set its level
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG) 
-# Add the console handler to the logger
-logger.addHandler(console_handler)
-
-'''
-# Log messages
-logger.debug('This is a debug message')
-logger.info('This is an info message')
-logger.warning('This is a warning message')
-logger.error('This is an error message')
-logger.critical('This is a critical message')
-'''
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
-
 
 
 app = FastAPI(title="Sample Framework to demonstrate the FAST API",
@@ -88,6 +81,71 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+@app.post("/api/kb/",  response_model=schemas.KnowledgeBaseResponse)
+async def create_knowledge_base_entry(
+    kb_create: schemas.KnowledgeBaseCreate,
+    db: Session = Depends(get_db)
+):
+    
+    db_user = db.query(models.User).filter(models.User.email == kb_create.email).first()
+    if db_user:
+        #create collection name
+        collection_name = f"{utils.clense_name(kb_create.title)}_kb_{utils.gen_random_string()}"
+        db_knowledge_base = models.KnowledgeBaseDB(
+            title=kb_create.title,
+            tag_or_version=kb_create.tag_or_version,
+            description=kb_create.description,
+            collection_name=collection_name,
+            user_id=db_user.id)
+        db.add(db_knowledge_base)
+        db.commit()
+        db.refresh(db_knowledge_base)
+        kb_addition.delay(
+            kb_create.title, 
+            kb_create.description, 
+            collection_name, 
+            db_user.id
+        )
+
+        #FIX ME: Return proper http code etc..
+        return db_knowledge_base
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+
+@app.post("/api/kb/upload")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        # Create safe filename and path
+        file_location = os.path.join(os.environ.get('UPLOADS_DIR'), f"{utils.gen_random_string()}_{file.filename}")
+
+        logger.debug(f"File :{file_location} started uploading... original name:{file.filename}")
+
+        #file_location = os.environ.get('UPLOADS') / file.filename
+        # Read the file in chunks and write asynchronously
+        async with aiofiles.open(file_location, 'wb') as out_file:
+            # Read and write the file in chunks of 1MB
+            #chunk_size = 1024 * 1024  # 1MB chunks
+            chunk_size = 8192 # take a sip of 8KB
+            while content := await file.read(chunk_size):
+                await out_file.write(content)
+        # Get file size for confirmation
+        file_size = os.path.getsize(file_location)
+    
+        return {
+            "filename": file.filename,
+            "size": file_size,
+            "status": "success",
+            "message": f"File '{file.filename}' uploaded successfully ({file_size} bytes)"
+        }
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error uploading file:{file.filename}  {e}")
+        return {
+            "status": "error",
+            "message": "File Upload Error"
+        }
 
 @app.post("/api/token")
 async def login(

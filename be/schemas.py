@@ -28,3 +28,23 @@ class Watchlist(WatchlistCreate):
 
     class Config:
         from_orm = True
+
+
+class KnowledgeBaseCreate(UserBase):
+    title: str
+    tag_or_version: str
+    description: str
+    file_name: str
+
+
+class KnowledgeBaseResponse(BaseModel):
+    id: int
+    title: str
+    tag_or_version: str
+    description: str
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        #orm_mode = True
+        from_attributes = True
