@@ -1,0 +1,37 @@
+# General
+.DS_Store
+.idea/
+.vscode/
+*.pyc
+*.swp
+__pycache__/
+
+# Virtual environments
+venv/
+virtualenv/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local configuration files
+.env
+.env.local
+*.secret
+
+# IDE-specific files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# Testing files
+.pytest_cache/
+test_results/
+
+# Jupyter Notebook files
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
