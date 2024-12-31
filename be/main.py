@@ -4,7 +4,8 @@ from fastapi import (
     Depends,
     status,
     File, 
-    UploadFile
+    UploadFile,
+    Form
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -88,11 +89,8 @@ async def create_knowledge_base_entry(
     db: Session = Depends(get_db)
 ):
     logger.debug(f"Creating knowledge base entry from input {kb_create}")
-    
-    
     db_user = db.query(models.User).filter(models.User.email == kb_create.email).first()
     if db_user:
-
         # Check if the entry already exists
         existing_entry = db.query(models.KnowledgeBaseDB).filter(
             models.KnowledgeBaseDB.title == kb_create.title,
@@ -119,8 +117,6 @@ async def create_knowledge_base_entry(
         db.commit()
         db.refresh(db_knowledge_base)
 
-        #FIX ME: Return proper http code etc..
-        #return db_knowledge_base
         return {'status': 'success',
                  'message': 'Knowledge base entry added successfully'
                 }
@@ -128,12 +124,67 @@ async def create_knowledge_base_entry(
         raise HTTPException(status_code=404, detail="User not found")
     
 
+@app.get("/api/kb/list")
+async def list_knowledge_base_entries(
+    kb_list: schemas.KnowledgeBaseList,
+    db: Session = Depends(get_db)
+):
+    logger.debug(f"Listing knowledge base entries for {kb_list}")
+    db_user = db.query(models.User).filter(models.User.email == kb_list.email).first()
+    if db_user:
+        entries = db.query(models.KnowledgeBaseDB.title, models.KnowledgeBaseDB.tag_or_version).filter(models.KnowledgeBaseDB.user_id == db_user.id).all()
+        #start
+        # Query all records
+    
+        # Group versions by title using dictionary comprehension
+        title_tags = {}
+        for title, tag in entries:
+            if title not in title_tags:
+                title_tags[title] = []
+            if tag not in title_tags[title]:  # Avoid duplicates
+                title_tags[title].append(tag)
+    
+        return title_tags
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+
+'''async def upload_file(
+    title: str = Form(...),
+    tag: str = Form(...),
+    email: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+    ):
+'''
+
 @app.post("/api/kb/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    title: str = Form(...),
+    tag: str = Form(...),
+    email: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+    ):
+
+    logger.debug(f"Uploading file {file.filename}  for title:{title} tag:{tag} ....")
+
     try:
         # Create safe filename and path
-        file_location = os.path.join(os.environ.get('UPLOADS_DIR'), f"{utils.gen_random_string()}_{file.filename}")
+        db_user = db.query(models.User).filter(models.User.email == email).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Retrieve the collection name from the database
+        db_knowledge_base = db.query(models.KnowledgeBaseDB).filter(
+            models.KnowledgeBaseDB.title == title,
+            models.KnowledgeBaseDB.tag_or_version == tag,
+            models.KnowledgeBaseDB.user_id == db_user.id
+        ).first()
 
+        if not db_knowledge_base:
+            raise HTTPException(status_code=404, detail="Knowledge base entry not found")
+
+        file_location = os.path.join(os.environ.get('UPLOADS_DIR'), f"{utils.gen_random_string()}_{file.filename}")
         logger.debug(f"File :{file_location} started uploading... original name:{file.filename}")
 
         #file_location = os.environ.get('UPLOADS') / file.filename
@@ -147,13 +198,15 @@ async def upload_file(file: UploadFile = File(...)):
         # Get file size for confirmation
         file_size = os.path.getsize(file_location)
 
-        '''
+        logger.debug(f"File :{file_location} uploaded successfully... preparing for ingestion....")
         kb_addition.delay(
-            kb_create.title, 
-            kb_create.description, 
-            collection_name, 
-            db_user.id
-        )'''
+            source = file_location,
+            title = title,
+            description = db_knowledge_base.description, 
+            collection_name=db_knowledge_base.collection_name ,
+            tag = tag,
+            user_id = db_user.id
+        )
 
     
         return {

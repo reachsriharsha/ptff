@@ -39,4 +39,12 @@ class KnowledgeBaseCreate(BaseModel):
     def __str__(self):
         return f"KnowledgeBaseCreate: title: {self.title}, tag_or_version: {self.tag_or_version}, description: {self.description}, file_name: {self.email}"
 
+class KnowledgeBaseList(BaseModel):
+    email: str
 
+class KnowledgeBaseUpload(BaseModel):
+    title: str
+    tag: str
+    email: str
+
+    

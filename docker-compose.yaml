@@ -58,6 +58,8 @@ services:
       context: ./be
       dockerfile: Dockerfile
     command: celery -A tasks worker --loglevel=info
+    env_file:
+      - ./be/.env.prod
     depends_on:
       - redis
       - backend

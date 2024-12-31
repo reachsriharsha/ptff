@@ -11,7 +11,7 @@
                     </div>
                 </div>
             </div>
-            <!-- First Card -->
+            <!-- First Card: To add file to knowledge base -->
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
@@ -19,10 +19,41 @@
                     </div>
                     <div class="card-body">
                         <form id="uploadForm" enctype=multipart/form-data>
+                            <div class="d-flex gap-3">
+                                <div class="flex-grow-1">
+                                    <label for="titleSelect" class="form-label">Title</label>
+                                    <select class="form-select" id="titleSelect">
+                                        <option value="">Choose a title...</option>
+                                        {% for title in title_tags.keys() %}
+                                            <option value="{{ title }}">{{ title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label for="tagSelect" class="form-label">Tag</label>
+                                    <select class="form-select" id="tagSelect" disabled>
+                                        <option value="">Choose a tag...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- select drop box start-->
+                            <!-- <div class="mb-3">
+                                <label for="titleSelect" class="form-label">Title</label>
+                                <select class="form-select" id="titleSelect">
+                                    <option value="">Choose a title...</option>
+                                    {% for title in title_tags.keys() %}
+                                        <option value="{{ title }}">{{ title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div> -->
+                            <!-- <div class="mb-3">
+                                <label for="tagSelect" class="form-label">Tag</label>
+                                <select class="form-select" id="tagSelect" disabled>
+                                    <option value="">Choose a tag...</option>
+                                </select> -->
+                             <!-- select drop box end-->
                             <div class="mb-3">
-
-                                <label for="file" class="form-label">Choose File(s)</label>
-                                <!-- <input type="file" class="form-control" id="file" name="file" required> -->
+                                <label for="file" class="form-label">Choose File(s) to be added...</label>
                                 <input type="file" class="form-control" id="file" name="file" multiple>
                                 
                             </div>
@@ -35,7 +66,7 @@
                 </div>
             </div>
 
-            <!-- Second Card -->
+            <!-- Second Card: To create the knowledge base -->
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
@@ -69,13 +100,25 @@
 
     <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script> -->
     <script src="{{ url_for('static', filename='bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js')}}"></script>
+    <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> -->
+    <script src="{{ url_for('static', filename='jquery-3.7.1.min.js')}}"></script>
     <script>
+        // Function to handle the upload form submission
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const formData = new FormData();
             const fileInput = document.getElementById('file');
-            //formData.append('file', fileInput.files[0]);
+            const titleSelect = document.getElementById('titleSelect').value;
+            const tagSelect = document.getElementById('tagSelect').value;
+
+            if (!titleSelect || !tagSelect) {
+                showAlert('Please select both a title and a tag.', 'warning');
+                return;
+            }
+
+            formData.append('title', titleSelect);
+            formData.append('tag', tagSelect);
             //start 
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append('file', fileInput.files[i]);
@@ -111,9 +154,14 @@
                     return response.json();
                 })
                 .then (data => {
-                        // Handle successful upload
+                        // Handle successful upload response.
                         console.log('File uploaded successfully:', data);
-                        showAlert('File uploaded and processed successfully!', 'success');
+                        if (data.status === 'error') {
+                            showAlert(`Upload Failed: ${data.message}`, 'danger');
+                        } else {
+                            showAlert(`File ${fileInput.files[i].name} uploaded and processed successfully!`, 'success');
+                        }
+                        //showAlert('File uploaded and processed successfully!', 'success');
                         /*showAlert('Green Success Message', 'success'); // Green alert
                         showAlert('Red Failed Message', 'danger');  // Red alert
                         showAlert('Yellow Warning Message', 'warning'); // Yellow alert
@@ -135,6 +183,7 @@
         });
     
         
+        // Function to handle the Knowledge Base creation form submission
         document.getElementById('kbCreateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const kbTitle = document.getElementById('kbTitle').value;
@@ -161,6 +210,43 @@
             }
             console.log('Knowledge Base created successfully:', responseData);
             showAlert('Knowledge Base created successfully!', 'success');
+        });
+
+        
+        // Store the version data from Flask
+        const titleTags = {{ title_tags | tojson }}
+        // console.log(typeof titleTags);
+        // console.log('the title tags:' + titleTags);
+
+        const strTitleTags = JSON.stringify(titleTags);
+        // console.log(typeof strTitleTags);
+        // console.log('stringed the title tags:' + strTitleTags);
+        // Parse the JSON string into a JavaScript object
+        const parsedTitleTags = JSON.parse(strTitleTags);
+
+        // Handle title selection change
+        $('#titleSelect').on('change', function() {
+            const selectedTitle = $(this).val();
+            const versionSelect = $('#tagSelect');
+            
+            // Clear and disable version dropdown if no title selected
+            if (!selectedTitle) {
+                versionSelect.html('<option value="">Choose a tag...</option>');
+                versionSelect.prop('disabled', true);
+                return;
+            }
+            
+            // Get versions for selected title
+            const versions = parsedTitleTags[selectedTitle];
+            
+            // Update version dropdown
+            versionSelect.html('<option value="">Choose a tag...</option>');
+            versions.forEach(version => {
+                versionSelect.append(`<option value="${version}">${version}</option>`);
+            });
+            
+            // Enable version dropdown
+            versionSelect.prop('disabled', false);
         });
     </script>
 

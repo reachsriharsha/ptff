@@ -22,9 +22,15 @@ class Synapse:
         return hash((self.neuron, self.weight))
     '''
 
-    def ingest_data_to_vector_db(self, source: str, title: str, description: str, collection_name: str, metadata:str, user_id: int):
+    def ingest_data_to_vector_db(self, 
+                                 source: str, 
+                                 title: str, 
+                                 description: str, 
+                                 collection_name: str, 
+                                 metadata:str, 
+                                 user_id: int):
 
         log = f"ingest_data_to_vector_db: {source}, {title}, {description}, {collection_name}, {user_id}"
-        logger.info(log)
+        logger.debug(log)
         time.sleep(10)
         return

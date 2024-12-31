@@ -51,20 +51,20 @@ def calculate_technical_indicators(symbol: str):
 
 
 @celery_app.task
-def kb_addition(title: str, 
-                description: str, 
+def kb_addition(source: str,
+                title: str, 
+                description: str,
                 collection_name: str, 
-                tag_or_version:str, 
-                file_name: str,
+                tag:str, 
                 user_id: int):
     try:
         #create new synapse layer to do all jobs
         synapse = Synapse()
-        synapse.ingest_data_to_vector_db(source=file_name, 
+        synapse.ingest_data_to_vector_db(source=source, 
                                          title=title, 
                                          description=description, 
                                          collection_name=collection_name, 
-                                         metadata=tag_or_version,
+                                         metadata=tag,
                                          user_id=user_id)   
 
         

@@ -54,7 +54,6 @@ def login():
         
         if response.status_code == 200:
             data = response.json()
-            logger.debug(f"User logged in successfully: {data}")
             session['access_token'] = data['access_token']
             session['username'] = request.form['username']
             session['email'] = data['email']
@@ -137,6 +136,17 @@ def create_kb():
 @app.route('/kb')
 @login_required
 def kb():
+
+    email = session.get('email', 'NA')
+    data = {
+        "email": email
+    }
+    response = requests.get(f'{os.getenv('BACKEND_URL')}/kb/list', json=data)
+    if response.status_code == 200:
+        title_tags = response.json()
+        logger.debug(f"Knowledge base entries: {title_tags}")
+        return render_template('kb.html', title_tags=title_tags)
+
     return render_template('kb.html')
 
 
@@ -151,8 +161,15 @@ def add_kb():
         return jsonify({'error': 'No file part'}), 400
     
     file = request.files['file']
+    title = request.form.get('title')
+    tag = request.form.get('tag')
+    email = session.get('email', 'NA')
+
+    data = {"title":title, "tag":tag, "email": email}
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
+    
+    logger.debug(f"Knowledge base addition details: {data}")
     
     #FIX ME: Check how to use allowed files only.
     if file and allowed_file(file.filename):
@@ -163,7 +180,18 @@ def add_kb():
             with open(safe_file_path, 'rb') as f:
                 #files = {'file': (filename, f, file.content_type)}
                 files = {'file':f}
-                response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', files=files)
+                '''response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', 
+                                         files=files, 
+                                         json={"title":title, 
+                                               "tag":tag, 
+                                               "email": email
+                                               }
+                                         )
+                '''
+                response = requests.post(f'{os.getenv('BACKEND_URL')}/kb/upload', 
+                                         data=data,
+                                         files=files
+                                         )
                 f.close()
                 if response.status_code == 200:
                     logger.info(f"Knowledge base entry added successfully: {response.json()}")
@@ -175,6 +203,7 @@ def add_kb():
                     }
                 #response.json()
                 else:
+                    logger.error(f"Knowledge base addition failed: {response.json()}")
                     return { "status": "error", "message": "Knowledge base addition failed" }
                 
     return render_template('kb.html', error="Knowledge base addition failed")

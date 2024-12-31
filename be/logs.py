@@ -6,7 +6,7 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 # Get the root logger and set its level
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) 
+logger.setLevel(logging.DEBUG) 
 # Add the console handler to the logger
 logger.addHandler(console_handler)
 
