@@ -43,6 +43,7 @@ def login_required(f):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    logger.debug(f"got the login request {request.form.to_dict()}")
     if request.method == 'POST':
         response = requests.post(
             f"{os.getenv('BACKEND_URL')}/token",

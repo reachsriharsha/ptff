@@ -22,3 +22,7 @@ def clense_name(name):
         name = "_" + name
     name = re.sub(r"[^\w\s]", "", name)
     return name
+
+#given a file name respond with extension of file
+def get_file_extension(file_name):
+    return file_name.split('.')[-1]

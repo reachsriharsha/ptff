@@ -129,7 +129,6 @@ async def list_knowledge_base_entries(
     kb_list: schemas.KnowledgeBaseList,
     db: Session = Depends(get_db)
 ):
-    logger.debug(f"Listing knowledge base entries for {kb_list}")
     db_user = db.query(models.User).filter(models.User.email == kb_list.email).first()
     if db_user:
         entries = db.query(models.KnowledgeBaseDB.title, models.KnowledgeBaseDB.tag_or_version).filter(models.KnowledgeBaseDB.user_id == db_user.id).all()

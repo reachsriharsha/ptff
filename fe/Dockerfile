@@ -1,13 +1,12 @@
 FROM python:3.12-slim
 
+COPY requirements.txt /app/requirements.txt
 WORKDIR /app
-COPY requirements.txt .
 COPY app.py .
 COPY templates ./templates
 COPY static ./static
 COPY wsgi.py .
 RUN pip install -r requirements.txt
-RUN pip install fastapi uvicorn
 COPY . .
 
 RUN mkdir -p /app/uploads
