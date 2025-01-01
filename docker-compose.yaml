@@ -22,6 +22,30 @@ services:
     networks:
       - ptff_network
 
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: ghcr.io/joeferner/redis-commander:latest
+    build: .
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    user: redis
+    networks:
+      - ptff_network
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    ports:
+      - "9000:9000"
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: unless-stopped
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -108,3 +132,4 @@ services:
     restart: unless-stopped 
 volumes:
   postgres_data:
+  portainer_data:
