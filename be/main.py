@@ -134,6 +134,8 @@ async def list_knowledge_base_entries(
         entries = db.query(models.KnowledgeBaseDB.title, models.KnowledgeBaseDB.tag_or_version).filter(models.KnowledgeBaseDB.user_id == db_user.id).all()
         #start
         # Query all records
+
+        corp_actions = db.query(models.CorpActionTypesDB.name).all()
     
         # Group versions by title using dictionary comprehension
         title_tags = {}
@@ -142,8 +144,12 @@ async def list_knowledge_base_entries(
                 title_tags[title] = []
             if tag not in title_tags[title]:  # Avoid duplicates
                 title_tags[title].append(tag)
+        
+        
     
-        return title_tags
+        return {'title_tags':title_tags,
+                'corp_actions': corp_actions}
+    
     else:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -155,6 +161,73 @@ async def list_knowledge_base_entries(
     db: Session = Depends(get_db)
     ):
 '''
+
+@app.post("/api/ca/upload")
+async def upload_file(
+    caName: str = Form(...),
+    cAction: str = Form(...),
+    email: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+    ):
+
+    logger.debug(f"Uploading file {file.filename}  for caName:{caName} cAction:{cAction} ....")
+
+    try:
+        # Create safe filename and path
+        db_user = db.query(models.User).filter(models.User.email == email).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        '''
+        # Retrieve the collection name from the database
+        db_knowledge_base = db.query(models.KnowledgeBaseDB).filter(
+            models.KnowledgeBaseDB.title == title,
+            models.KnowledgeBaseDB.tag_or_version == tag,
+            models.KnowledgeBaseDB.user_id == db_user.id
+        ).first()
+
+        if not db_knowledge_base:
+            raise HTTPException(status_code=404, detail="Knowledge base entry not found")
+        '''
+
+        file_location = os.path.join(os.environ.get('UPLOADS_DIR'), f"{utils.gen_random_string()}_{file.filename}")
+        logger.debug(f"File :{file_location} started uploading... original name:{file.filename}")
+
+        #file_location = os.environ.get('UPLOADS') / file.filename
+        # Read the file in chunks and write asynchronously
+        async with aiofiles.open(file_location, 'wb') as out_file:
+            # Read and write the file in chunks of 1MB
+            #chunk_size = 1024 * 1024  # 1MB chunks
+            chunk_size = 8192 # take a sip of 8KB
+            while content := await file.read(chunk_size):
+                await out_file.write(content)
+        # Get file size for confirmation
+        file_size = os.path.getsize(file_location)
+
+        logger.debug(f"File :{file_location} uploaded successfully... preparing for ingestion....")
+        
+        ca_addition.delay(
+            source = file_location,
+            caName = caName,
+            cAction = cAction,
+            user_id = db_user.id
+        )
+
+    
+        return {
+            "filename": file.filename,
+            "size": file_size,
+            "status": "success",
+            "message": f"File '{file.filename}' uploaded successfully ({file_size} bytes)"
+        }
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error uploading file:{file.filename}  {e}")
+        return {
+            "status": "error",
+            "message": "File Upload Error"
+        }
 
 @app.post("/api/kb/upload")
 async def upload_file(

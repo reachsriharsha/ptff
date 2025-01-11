@@ -94,6 +94,47 @@
                 </div>
             </div>
             <!-- Second Card -->
+
+            <!-- Third Card: To add file to knowledge base -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Upload Company Action</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadCaForm" enctype=multipart/form-data>
+                            <div class="d-flex gap-3">
+                                <div class="flex-grow-1">
+                                    <label for="caName" class="form-label">Compay Name</label>
+                                    <select class="form-select" id="caName">
+                                        <option value="">Choose a company...</option>
+                                        <!-- {% for company in company_data.keys() %} -->
+                                        {% for company in company_data %}
+                                            <option value="{{ title }}">{{ company }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label for="cAction" class="form-label">Action</label>
+                                    <select class="form-select" id="cAction" disabled>
+                                        <option value="">Choose an Action...</option>
+                                    </select>
+                                </div>
+                            </div>
+                           
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Choose File(s) to be added...</label>
+                                <input type="file" class="form-control" id="cafile" name="cafile" multiple>
+                                
+                            </div>
+                            <div class="progress mb-3 d-none">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Upload</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
             
         </div>
     </div>

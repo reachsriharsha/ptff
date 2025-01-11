@@ -1,11 +1,11 @@
 FROM python:3.12-slim
 
-COPY requirements.txt /app/requirements.txt
+COPY ./fe/requirements.txt /app/requirements.txt
 WORKDIR /app
-COPY app.py .
-COPY templates ./templates
-COPY static ./static
-COPY wsgi.py .
+COPY ./fe/app.py .
+COPY ./fe/templates ./templates
+COPY ./fe/static ./static
+COPY ./fe/wsgi.py .
 RUN pip install -r requirements.txt
 COPY . .
 

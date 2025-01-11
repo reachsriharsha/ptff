@@ -1,9 +1,11 @@
 include:
   - docker-compose.networks.yaml
   - docker-compose.milvus.yaml
+  - docker-compose.tools.yaml
 
 services:
   nginx:
+    container_name: ptff-nginx
     image: nginx:alpine
     ports:
       - "80:80"
@@ -11,42 +13,20 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
-      - frontend
+#      - frontend
     networks:
       - ptff_network
   
   redis:
+    container_name: ptff-redis
     image: redis:alpine
     ports:
       - "6379:6379"
     networks:
       - ptff_network
 
-  redis-commander:
-    container_name: redis-commander
-    hostname: redis-commander
-    image: ghcr.io/joeferner/redis-commander:latest
-    build: .
-    restart: always
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-    ports:
-      - "8081:8081"
-    user: redis
-    networks:
-      - ptff_network
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    ports:
-      - "9000:9000"
-      - "8000:8000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
-    restart: unless-stopped
-
   postgres:
+    container_name: ptff-postgres
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: postgres
@@ -60,9 +40,10 @@ services:
       - ptff_network
 
   backend:
+    container_name: ptff-backend
     build:
-      context: ./be
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: be/Dockerfile
     environment:
       - PORT=8000
       - REDIS_URL = redis://redis:6379/0
@@ -78,9 +59,10 @@ services:
       - ptff_network
 
   celery_worker:
+    container_name: ptff-celery-worker  
     build:
-      context: ./be
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: be/Dockerfile
     command: celery -A tasks worker --loglevel=info
     env_file:
       - ./be/.env.prod
@@ -92,23 +74,12 @@ services:
       - ./uploads/be:/app/uploads
     networks:
       - ptff_network
-
-  flower:
-    image: mher/flower
-    ports:
-      - "5555:5555"
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - FLOWER_PORT=5555
-    depends_on:
-      - redis
-    networks:
-      - ptff_network
       
   frontend:
+    container_name: ptff-frontend
     build:
-      context: ./fe
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: fe/Dockerfile
     environment:
       - BACKEND_URL=http://nginx/api
     env_file:
@@ -120,14 +91,16 @@ services:
       - ptff_network
 
   ollama:
+    container_name: ptff-ollama
     image: ollama/ollama:latest  # Use the latest Ollama image
-    container_name: ollama 
     ports:
       - "11434:11434"  # Expose the Ollama API port
     volumes:
-      - ./models:/root/.local/share/ollama/models  # Mount your model files 
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/ollama:/root/.ollama
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/ollama/scripts:/root/scripts
+    privileged: true  # Required for GPU support
     environment:
-      - GPU_MODE=auto  # Enable GPU support if available
+      #- GPU_MODE=auto  # Enable GPU support if available
       - GIN_MODE=release
     restart: unless-stopped 
 volumes:

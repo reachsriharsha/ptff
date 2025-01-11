@@ -57,6 +57,15 @@ class KnowledgeBaseDB(Base):
         return f"KnowledgeBaseDB: title: {self.title}, description: {self.description}, collection_name: {self.collection_name}, created_at: {self.created_at}, user_id: {self.user_id}"
 
 
+class CorpActionTypesDB(Base):
+    __tablename__ = "corp_action_types"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    description = Column(String)
+
+    def __str__(self):
+        return f"CorpActionTypes: name: {self.name}, description: {self.description}"
 
 class Watchlist(Base):
     __tablename__ = "watchlists"

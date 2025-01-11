@@ -3,6 +3,8 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 from synapse import Synapse
+from logs import logger  # Import the logger from the logger.py file
+
 
 @celery_app.task
 def analyze_stock(symbol: str):
@@ -49,6 +51,26 @@ def calculate_technical_indicators(symbol: str):
             'error': str(e)
         }
 
+
+@celery_app.task
+def ca_addition(source: str,
+                caName: str, 
+                cAction: str,
+                
+                user_id: int):
+    try:
+        logger.info(f"Adding new corporate action: {caName}")
+
+        return {    
+            'status': 'completed',
+            'message': 'Corporate action added successfully'
+        }
+
+    except Exception as e:
+        return {
+            'status': 'error',
+            'error': str(e)
+        }
 
 @celery_app.task
 def kb_addition(source: str,
