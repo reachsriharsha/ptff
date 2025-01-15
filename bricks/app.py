@@ -202,6 +202,137 @@ def extract_rhp_data(pdf_path: str, sections_of_interest: List[str]) -> Dict:
         
     return extracted_data
 
+class OpenOfferExtractor:
+    def __init__(self, pdf_path: str):
+        """Initialize with PDF path."""
+        self.pdf = pdfplumber.open(pdf_path)
+        self.toc_data = self._extract_toc()
+
+        #for key in self.toc_data.keys():
+        #    print(f"ToC Item:{key} \n Data:{self.toc_data[key]}")
+        
+    def _extract_toc(self) -> Dict[str, int]:
+        """
+        Extract TOC with section names.
+        Returns dict with section names as keys and page numbers as values.
+        """
+        toc_pattern = r'(?:\d+\.)?\s*(.*?)\.{2,}\s*(\d+)$'
+        toc_mapping = {}
+        
+        # Find TOC page
+        for page_num, page in enumerate(self.pdf.pages[:20]):
+            text = page.extract_text()
+            if "TABLE OF CONTENTS" in text:
+                lines = text.split('\n')
+                for line in lines:
+                    match = re.search(toc_pattern, line)
+                    if match:
+                        section_name = match.group(1).strip()
+                        page_num = int(match.group(2))
+                        toc_mapping[section_name] = page_num
+                        #print (f"Section:{section_name} --> [{page_num}]")
+                break
+                
+        return toc_mapping
+    
+    def extract_section_content(self, section_name: str) -> str:
+        """
+        Extract content from a specific section.
+        Args:
+            section_name: Name of the section to extract
+        Returns:
+            Extracted text content
+        """
+        if section_name not in self.toc_data:
+            raise ValueError(f"Section '{section_name}' not found in TOC")
+            
+        start_page = self.toc_data[section_name]
+        content = []
+        
+        # Convert to 0-based index
+        current_page = start_page - 1
+        
+        while current_page < len(self.pdf.pages):
+            page = self.pdf.pages[current_page]
+            text = page.extract_text()
+            
+            # Check if we've reached the next section
+            next_section_found = False
+            for next_section, next_page in self.toc_data.items():
+                if next_page > start_page and next_section in text:
+                    next_section_found = True
+                    break
+                    
+            if next_section_found and current_page > start_page - 1:
+                break
+                
+            # Extract tables from the page
+            tables = page.extract_tables()
+            if tables:
+                for table in tables:
+                    content.append("\nTABLE:")
+                    content.extend(" | ".join(str(cell) for cell in row) for row in table)
+                    content.append("\n")
+            
+            content.append(text)
+            current_page += 1
+            
+        return "\n".join(content)
+    
+    def get_section_names(self) -> List[str]:
+        """Return list of all available section names."""
+        return list(self.toc_data.keys())
+    
+    def extract_all_sections(self) -> Dict[str, str]:
+        """Extract content from all sections."""
+        return {name: self.extract_section_content(name) for name in self.toc_data.keys()}
+    
+    def extract_forms(self) -> Dict[str, str]:
+        """Extract specifically the forms sections."""
+        forms = {}
+        for name in self.toc_data.keys():
+            if "FORM" in name.upper():
+                forms[name] = self.extract_section_content(name)
+        return forms
+    
+    def close(self):
+        """Close the PDF file."""
+        self.pdf.close()
+
+def extract_open_offer_data(pdf_path: str, section_names: List[str] = None) -> Dict[str, str]:
+    """
+    Main function to extract data from TOC sections.
+    Args:
+        pdf_path: Path to the PDF file
+        section_names: List of section names to extract (optional)
+    Returns:
+        Dictionary containing extracted data
+    """
+    extractor = OpenOfferExtractor(pdf_path)
+    
+    try:
+        # Print available sections for reference
+        print("Available sections:")
+        for name in extractor.get_section_names():
+            print(f"- {name}")
+            
+        if section_names:
+            # Validate section names
+            invalid_sections = [name for name in section_names if name not in extractor.get_section_names()]
+            if invalid_sections:
+                raise ValueError(f"Invalid section names: {invalid_sections}")
+                
+            return {name: extractor.extract_section_content(name) for name in section_names}
+        else:
+            # Extract all sections if none specified
+            return extractor.extract_all_sections()
+            
+    finally:
+        extractor.close()
+
+# Example usage:
+
+
 def rhp_extractor_example():
     #sections = [
     #"SECTION II - ISSUE DOCUMENT SUMMARY",
@@ -227,11 +358,26 @@ def rhp_extractor_example():
 
     print(data)
 
+def open_offer_extractor_example():
+    # Extract specific sections by name
+    sections_needed = [
+    'DETAILS OF THIS OFFER',
+    'BACKGROUND OF ACQUIRER',
+    'BACKGROUND OF THE TARGET COMPANY',
+    'OFFER PRICE AND FINANCIAL ARRANGEMENTS'
+    ]
+    data = extract_open_offer_data("of1.pdf", sections_needed)
 
+    for key in data:
+        print(f"===========section:{key}\n{data[key]}\n===============\n")
+    #print(f"Section data:{data}")
+
+    # Or extract all sections
+    #all_data = extract_open_offer_data("of1.pdf")
 
 def main():
-    rhp_extractor_example()
-
+    #rhp_extractor_example()
+    open_offer_extractor_example()
 
 
 if __name__ == '__main__':
